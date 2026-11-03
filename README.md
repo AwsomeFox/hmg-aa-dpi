@@ -6,6 +6,13 @@ It does what [aa-proxy-rs](https://github.com/aa-proxy/aa-proxy-rs)'s `dpi` sett
 
 Optionally (`TAP_LIMIT=off`) it also removes AA's tap/scroll limit while driving, the "you've scrolled a lot" lockout, the same way aa-proxy-rs's `remove_tap_restriction` does. See [Tap/scroll limit](#tapscroll-limit-tap_limitoff).
 
+> [!NOTE]
+> **HMG-API mod with an app in the car:** [`hmgapi-mod/`](hmgapi-mod/README.md) does the same
+> as a mod for [HMG-API](https://github.com/VysseCodes/HMG-API) (the successor of HMG Leafia
+> Plus): an **AA DPI** app in the car's menu sets the DPI and the tap/scroll limit, applied at
+> the next Android Auto connection, with nothing on the head unit changed. Not tested on a
+> car yet. The rest of this page is the NEMESIS package.
+
 > [!WARNING]
 > This modifies a system app on your infotainment unit. The installer verifies everything before it touches `/system` and keeps a byte-for-byte backup, but you use it at your own risk. Not affiliated with Hyundai, Kia or Google.
 
@@ -315,7 +322,7 @@ Files on the unit:
 
 ## Not done: changing DPI at runtime
 
-Researched, not built. The 6-argument `nearestVideoConfiguration` wrapper is 45 code units. It has two near-identical branches that could be merged, freeing room to insert `SystemProperties.getInt("density", p3)` (and the same for p4). GPM's dex already references `SystemProperties.getInt(String,int)` (method id 257 in projection-tbt) and contains the string `"density"` (string id 6118). The rewrite would stay the same size, padded with `nop`s.
+In the NEMESIS package: researched, not built. The HMG-API mod ([`hmgapi-mod/`](hmgapi-mod/README.md)) does it with a hook instead, set from its app in the car. The 6-argument `nearestVideoConfiguration` wrapper is 45 code units. It has two near-identical branches that could be merged, freeing room to insert `SystemProperties.getInt("density", p3)` (and the same for p4). GPM's dex already references `SystemProperties.getInt(String,int)` (method id 257 in projection-tbt) and contains the string `"density"` (string id 6118). The rewrite would stay the same size, padded with `nop`s.
 
 That would allow `setprop density 140` and reconnecting the phone, with no reinstall. The catches: `density` isn't a `persist.*` property, so a boot service would need to re-apply it, and a dialog app would need NEMESIS root to `setprop`. Dropped for now in favour of the install-time value.
 

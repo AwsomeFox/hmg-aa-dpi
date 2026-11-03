@@ -1,5 +1,7 @@
-# build output
+# build output (build/ also holds the app signing key: never commit it)
 tool/build/
+build/
+*.p12
 dist/
 __pycache__/
 
