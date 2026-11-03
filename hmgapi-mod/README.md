@@ -70,8 +70,9 @@ HMGAPI=../HMG-API sh hmgapi-mod/build.sh ~/hmg-keys/<name>.key
 
 1. Uninstall the NEMESIS package `aa.dpi` first (NEMESIS Manager → `aa.dpi` → uninstall,
    reboot): it patches GPM's file, which HMG-API expects stock.
-2. HMG-API 1.0.0-beta.6 or newer. Its hooks run on a car whose map is checked on a car,
-   or with "testing maps" on in the HMG-API app (`hmgapid engine verify-map` checks it).
+2. HMG-API 1.0.0-beta.6 or newer. Its hooks run on a car whose map is checked on a car:
+   in the HMG-API app's **Settings**, tap **Check the map on this car** (hooks run once it
+   passes and the head unit restarts), or turn on **Try unchecked maps**. No adb needed.
 3. Download `aa-dpi-<version>.zip` from the repo's Releases (or build it, above), put it
    in `HMGAPI/updates/` on a USB stick, then **Check USB updates** in the HMG-API app (or
    install it over adb). Until the author key is on HMG-API's trusted list
