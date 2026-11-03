@@ -99,7 +99,7 @@ Repository secrets it needs (Settings → Secrets and variables → Actions):
 
 | Secret | What |
 |---|---|
-| `HMGAPI_AUTHOR_KEY` | the contents of your HMG-API author key file (`Signing keygen`, one line): signs the mod package. HMG-API only updates a mod from the key that installed it. |
+| `HMGAPI_AUTHOR_KEY` | the contents of your HMG-API author key file (`Signing keygen`, one line; CI derives the `.pub` from it): signs the mod package. HMG-API only updates a mod from the key that installed it. |
 | `AADPI_APP_KEY` | the app's signing key, `base64 < ~/hmg-keys/aa-dpi-app.p12` |
 | `AADPI_APP_KEY_PASS` | its password (`~/hmg-keys/aa-dpi-app.pass`) |
 

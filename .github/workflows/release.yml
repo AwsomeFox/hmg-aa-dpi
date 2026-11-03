@@ -75,6 +75,9 @@ jobs:
           umask 077
           mkdir -p "$RUNNER_TEMP/keys"
           printf '%s\n' "$AUTHOR_KEY" > "$RUNNER_TEMP/keys/author.key"
+          # HMG-API's signer wants the public key beside it (<key>.pub): derived from the private one
+          base64 -d < "$RUNNER_TEMP/keys/author.key" | openssl pkey -inform DER -pubout -outform DER | base64 -w0 > "$RUNNER_TEMP/keys/author.key.pub"
+          echo >> "$RUNNER_TEMP/keys/author.key.pub"
           printf '%s' "$APP_KEY" | base64 -d > "$RUNNER_TEMP/keys/app.p12"
           echo "AADPI_APP_KEY=$RUNNER_TEMP/keys/app.p12" >> "$GITHUB_ENV"
 
