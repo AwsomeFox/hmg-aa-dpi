@@ -52,16 +52,18 @@ HMGAPI=../HMG-API sh hmgapi-mod/build.sh
 HMGAPI=../HMG-API sh hmgapi-mod/test/run.sh
 ```
 
-The first gives `build/hmgapi/mod/aa-dpi/`. The app is signed with a key made once in
-`build/keys/` (or `AADPI_APP_KEY`); keep it, so updates install over the app. With your
-HMG-API author key, the build also signs the package, `dist/aa-dpi-<version>.zip`:
+The first gives `build/hmgapi/mod/aa-dpi/`. The app is signed with
+`~/hmg-keys/aa-dpi-app.p12` (made there once, with its password in
+`aa-dpi-app.pass`, if it's missing), or `AADPI_APP_KEY` / `AADPI_APP_KEY_PASS`. Keep it
+backed up: an update must be signed with the same key to install over the app. With
+your HMG-API author key, the build also signs the package, `dist/aa-dpi-<version>.zip`:
 
 ```bash
-java -cp ../HMG-API/out/engine-host hmgapi.engine.Signing keygen ~/hmg-keys/aa-dpi.key
+java -cp ../HMG-API/out/engine-host hmgapi.engine.Signing keygen ~/hmg-keys/<name>.key
 ```
 
 ```bash
-HMGAPI=../HMG-API sh hmgapi-mod/build.sh ~/hmg-keys/aa-dpi.key
+HMGAPI=../HMG-API sh hmgapi-mod/build.sh ~/hmg-keys/<name>.key
 ```
 
 ## Install
@@ -70,7 +72,35 @@ HMGAPI=../HMG-API sh hmgapi-mod/build.sh ~/hmg-keys/aa-dpi.key
    reboot): it patches GPM's file, which HMG-API expects stock.
 2. HMG-API 1.0.0-beta.6 or newer. Its hooks run on a car whose map is checked on a car,
    or with "testing maps" on in the HMG-API app (`hmgapid engine verify-map` checks it).
-3. Put `aa-dpi-<version>.zip` in `HMGAPI/updates/` on a USB stick, then **Check USB
-   updates** in the HMG-API app (or install it over adb).
+3. Download `aa-dpi-<version>.zip` from the repo's Releases (or build it, above), put it
+   in `HMGAPI/updates/` on a USB stick, then **Check USB updates** in the HMG-API app (or
+   install it over adb). Until the author key is on HMG-API's trusted list
+   (`maps/authors.json`), HMG-API installs it with a warning.
 
 In HMG-API's log, `[aa-dpi]` lines show each connection's DPI and tap limit.
+
+## Releasing
+
+Releases are built by CI, from a release created in GitHub's UI
+(`.github/workflows/release.yml`):
+
+1. Set `"version"` in `hmgapi-mod/mod.json` (and `android:versionCode` /
+   `android:versionName` in `app/AndroidManifest.xml`, so the app updates) and merge it
+   to `main`.
+2. In GitHub: **Releases → Draft a new release**, tag `v<version>`, publish.
+3. CI checks the tag matches `mod.json`, checks out HMG-API (`HMGAPI_REF` in the
+   workflow, a release tag), runs `test/run.sh`, builds the app and the mod with the keys
+   below and attaches `aa-dpi-<version>.zip` to the release. A failed check leaves the
+   release without the zip; fix it and re-run the workflow (Actions → Release → Run
+   workflow, with the tag).
+
+Repository secrets it needs (Settings → Secrets and variables → Actions):
+
+| Secret | What |
+|---|---|
+| `HMGAPI_AUTHOR_KEY` | the contents of your HMG-API author key file (`Signing keygen`, one line): signs the mod package. HMG-API only updates a mod from the key that installed it. |
+| `AADPI_APP_KEY` | the app's signing key, `base64 < ~/hmg-keys/aa-dpi-app.p12` |
+| `AADPI_APP_KEY_PASS` | its password (`~/hmg-keys/aa-dpi-app.pass`) |
+
+Keep the key files backed up outside GitHub too: secrets can't be read back.
+

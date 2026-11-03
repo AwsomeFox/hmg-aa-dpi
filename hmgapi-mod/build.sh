@@ -11,9 +11,10 @@
 # and the Android SDK (build-tools, a platform android.jar; ANDROID_HOME).
 # A new author key: java -cp "$HMGAPI/out/engine-host" hmgapi.engine.Signing keygen <file>
 #
-# The app (AaDpi.apk) is signed with AADPI_APP_KEY (a .p12, password in
-# AADPI_APP_KEY_PASS), or else with a key made once in build/keys: keep using one
-# key, so an update installs over the app.
+# The app (AaDpi.apk) is signed with AADPI_APP_KEY (a .p12; default
+# ~/hmg-keys/aa-dpi-app.p12, made there once if missing, outside CI), password in
+# AADPI_APP_KEY_PASS or the .pass file next to it. Keep using one key, so an update
+# installs over the app.
 set -e
 cd "$(dirname "$0")/.."
 REPO=$PWD
@@ -49,14 +50,21 @@ javac --release 8 -Xlint:-options -nowarn -cp "$ANDROID_JAR:$HMGAPI/out/hmgapi-c
 cp "$W/base.apk" "$W/unsigned.apk"
 (cd "$W" && zip -q -X unsigned.apk classes.dex)
 "$BT/zipalign" -f 4 "$W/unsigned.apk" "$W/aligned.apk"
-K=${AADPI_APP_KEY:-$REPO/build/keys/aa-dpi-app.p12}
-P=${AADPI_APP_KEY_PASS:-aa-dpi}
+K=${AADPI_APP_KEY:-$HOME/hmg-keys/aa-dpi-app.p12}
 if [ ! -f "$K" ]; then
+    if [ -n "$CI" ]; then
+        echo "no app key at $K (CI: set the AADPI_APP_KEY and AADPI_APP_KEY_PASS secrets)" >&2
+        exit 1
+    fi
     mkdir -p "$(dirname "$K")"
-    keytool -genkeypair -keystore "$K" -storetype pkcs12 -storepass "$P" -keypass "$P" -alias app \
-        -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=AA DPI" >/dev/null 2>&1
-    echo "made an app key: $K (keep it: updates must be signed with it)"
+    (umask 077; openssl rand -hex 24 | tr -d '\n' > "${K%.p12}.pass")
+    keytool -genkeypair -keystore "$K" -storetype pkcs12 -storepass "$(cat "${K%.p12}.pass")" \
+        -keypass "$(cat "${K%.p12}.pass")" -alias app -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=AA DPI" >/dev/null 2>&1
+    chmod 600 "$K"
+    echo "made an app key: $K (keep it and ${K%.p12}.pass backed up: updates must be signed with it)"
 fi
+P=${AADPI_APP_KEY_PASS:-$(cat "${K%.p12}.pass" 2>/dev/null)}
+[ -n "$P" ] || { echo "no password for $K (AADPI_APP_KEY_PASS, or ${K%.p12}.pass next to it)" >&2; exit 1; }
 "$BT/apksigner" sign --ks "$K" --ks-pass "pass:$P" --min-sdk-version 9 \
     --v2-signing-enabled false --v3-signing-enabled false --out "$MOD/app/AaDpi.apk" "$W/aligned.apk"
 

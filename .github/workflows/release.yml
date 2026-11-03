@@ -1,0 +1,104 @@
+# Builds the HMG-API mod (with its AA DPI app) for a release made in GitHub's UI and
+# attaches it: Releases -> Draft a new release -> tag v<version> (the "version" in
+# hmgapi-mod/mod.json) -> Publish. To build again for an existing release (after a
+# failed run, say): Actions -> Release -> Run workflow, with its tag.
+#
+# Needs the repository secrets HMGAPI_AUTHOR_KEY (the HMG-API author key file's
+# contents), AADPI_APP_KEY (the app's .p12, base64) and AADPI_APP_KEY_PASS. Every
+# version must be signed with the same keys, or the mod and its app won't update.
+name: Release
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Release tag to build and attach to (v<version>)
+        required: true
+
+permissions:
+  contents: write
+
+env:
+  # the HMG-API the mod is built and tested against (a release tag)
+  HMGAPI_REF: v1.0.0-beta.6
+
+jobs:
+  hmgapi-mod:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Tag
+        id: tag
+        run: echo "tag=${{ github.event.release.tag_name || inputs.tag }}" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.tag.outputs.tag }}
+
+      - uses: actions/checkout@v4
+        with:
+          repository: VysseCodes/HMG-API
+          ref: ${{ env.HMGAPI_REF }}
+          path: HMG-API
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: The tag is the mod's version
+        id: version
+        run: |
+          v=$(sed -n 's/.*"version": *"\([^"]*\)".*/\1/p' hmgapi-mod/mod.json | head -1)
+          if [ "v$v" != "${{ steps.tag.outputs.tag }}" ]; then
+            echo "::error::release tag ${{ steps.tag.outputs.tag }} isn't v$v, the version in hmgapi-mod/mod.json"
+            exit 1
+          fi
+          echo "version=$v" >> "$GITHUB_OUTPUT"
+
+      - name: Android SDK (build-tools with d8 and aapt2, a platform android.jar)
+        run: |
+          ls "$ANDROID_HOME"/build-tools/*/d8 >/dev/null 2>&1 && ls "$ANDROID_HOME"/platforms/android-*/android.jar >/dev/null 2>&1 \
+            || yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "build-tools;35.0.0" "platforms;android-35" >/dev/null
+
+      - name: Keys
+        env:
+          AUTHOR_KEY: ${{ secrets.HMGAPI_AUTHOR_KEY }}
+          APP_KEY: ${{ secrets.AADPI_APP_KEY }}
+          APP_KEY_PASS: ${{ secrets.AADPI_APP_KEY_PASS }}
+        run: |
+          for s in AUTHOR_KEY:HMGAPI_AUTHOR_KEY APP_KEY:AADPI_APP_KEY APP_KEY_PASS:AADPI_APP_KEY_PASS; do
+            eval "v=\$${s%%:*}"
+            [ -n "$v" ] || { echo "::error::the ${s#*:} secret isn't set (Settings -> Secrets and variables -> Actions)"; exit 1; }
+          done
+          umask 077
+          mkdir -p "$RUNNER_TEMP/keys"
+          printf '%s\n' "$AUTHOR_KEY" > "$RUNNER_TEMP/keys/author.key"
+          printf '%s' "$APP_KEY" | base64 -d > "$RUNNER_TEMP/keys/app.p12"
+          echo "AADPI_APP_KEY=$RUNNER_TEMP/keys/app.p12" >> "$GITHUB_ENV"
+
+      - name: Build and test
+        env:
+          HMGAPI: ${{ github.workspace }}/HMG-API
+          AADPI_APP_KEY_PASS: ${{ secrets.AADPI_APP_KEY_PASS }}
+        run: |
+          sh hmgapi-mod/build.sh
+          sh hmgapi-mod/test/run.sh
+
+      - name: Signed package
+        env:
+          HMGAPI: ${{ github.workspace }}/HMG-API
+          AADPI_APP_KEY_PASS: ${{ secrets.AADPI_APP_KEY_PASS }}
+        run: |
+          sh hmgapi-mod/build.sh "$RUNNER_TEMP/keys/author.key"
+          ls -l "dist/aa-dpi-${{ steps.version.outputs.version }}.zip"
+
+      - name: Attach to the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release upload "${{ steps.tag.outputs.tag }}" "dist/aa-dpi-${{ steps.version.outputs.version }}.zip" --clobber
+
+      - name: Remove the keys
+        if: always()
+        run: rm -rf "$RUNNER_TEMP/keys"
