@@ -91,9 +91,11 @@ Releases are built by CI, from a release created in GitHub's UI
 2. In GitHub: **Releases → Draft a new release**, tag `v<version>`, publish.
 3. CI checks the tag matches `mod.json`, checks out HMG-API (`HMGAPI_REF` in the
    workflow, a release tag), runs `test/run.sh`, builds the app and the mod with the keys
-   below and attaches `aa-dpi-<version>.zip` to the release. A failed check leaves the
-   release without the zip; fix it and re-run the workflow (Actions → Release → Run
-   workflow, with the tag).
+   below and attaches `aa-dpi-<version>.zip` to the release, with its NEMESIS packages
+   (HMG-API's `tools/mknemesismod.sh`): `aa-dpi-<version>-nemesis.zip` for a USB stick
+   and `aa-dpi-<version>-nemesis-package.zip` for the NEMESIS Package Store. A failed
+   check leaves the release without them; fix it and re-run the workflow (Actions →
+   Release → Run workflow, with the tag).
 
 Repository secrets it needs (Settings → Secrets and variables → Actions):
 

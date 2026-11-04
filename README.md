@@ -17,6 +17,7 @@ There are two ways to run it:
 1. If the NEMESIS package `aa.dpi` is installed, uninstall it first (NEMESIS Manager → `aa.dpi` → uninstall, reboot): it patches the Android Auto app's file, which HMG-API expects stock.
 2. Install [HMG-API](https://github.com/VysseCodes/HMG-API/releases) 1.0.0 or newer. On a car whose hook map isn't checked on a car yet (the Ioniq 5's): in the HMG-API app's **Settings**, tap **Check the map on this car** (hooks run once it passes and the head unit restarts), or turn on **Try unchecked maps**. No adb needed.
 3. Download `aa-dpi-<version>.zip` from [Releases](../../releases), put it in a folder `HMGAPI/updates/` on a USB stick, plug it in, and tap **Check USB updates** in the HMG-API app.
+   **Or through NEMESIS:** unzip `aa-dpi-<version>-nemesis.zip` onto an empty USB stick and plug it in, then confirm in NEMESIS. It installs as NEMESIS package `hmgapi.aa-dpi` (needs HMG-API 1.0 or newer), and HMG-API's engine does the install, so it's the same mod either way. NEMESIS Manager can then update or uninstall it.
 
 ### Use
 
